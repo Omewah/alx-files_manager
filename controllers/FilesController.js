@@ -8,7 +8,7 @@ const uuid = require('uuid');
 const getTokenUser = async (req) => {
   const myToken = req.header('X-Token');
   const userId = await redisClient.get(`auth_${myToken}`);
-  return userId;
+  return (userId);
 };
 
 class FilesController {
@@ -71,8 +71,8 @@ class FilesController {
     await fs.promises.mkdir(folderPath, { recursive: true });
     await fs.promises.writeFile(filePath, fileData);
     objectData.localPath = filePath;
-    const uploadFile = await dbClient.db.collection('files').insertOne(objectData);
-    const [ops] = uploadFile.ops;
+    const uploadFlie = await dbClient.db.collection('files').insertOne(objectData);
+    const [ops] = uploadFlie.ops; // we can do also ops = uploadFile.ops[0]
     const result = {
       id: ops._id.toString(),
       userId: ops.userId,
@@ -82,41 +82,6 @@ class FilesController {
       parentId: ops.parentId,
     };
     return res.status(201).json(result);
-  }
-
-  async getShow(req, res) {
-    const userId = await this.getTokenUser(req);
-    const user = await dbClient.db
-      .collection('users')
-      .findOne({ _id: new ObjectId(userId) });
-    if (!user) return res.status(401).send({ error: 'Unauthorized' });
-    const { id } = req.params;
-    const file = await dbClient.db
-      .collection('files')
-      .findOne({ _id: new ObjectId(id) });
-    if (!file || (file && file.userId !== user._id.toString())) return res.status(404).send({ error: 'Not found' });
-    return res.status(200).send(file);
-  }
-
-  async getIndex(req, res) {
-    const userId = await this.getTokenUser(req);
-    const user = await dbClient.db
-      .collection('users')
-      .findOne({ _id: new ObjectId(userId) });
-    if (!user) return res.status(401).send({ error: 'Unauthorized' });
-    const { parentId, page = 0 } = req.query;
-    const limit = 20;
-    const skip = page * limit;
-
-    const files = await dbClient.db
-      .collection('files')
-      .aggregate([
-        { $match: { parentId } },
-        { $skip: skip },
-        { $limit: limit },
-      ])
-      .toArray();
-    return res.status(200).send(files);
   }
 }
 
